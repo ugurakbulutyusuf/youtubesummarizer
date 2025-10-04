@@ -101,19 +101,22 @@ def get_transcript(video_id):
     try:
         transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["tr"])
         return " ".join([seg["text"] for seg in transcript])
-    except (TranscriptsDisabled, NoTranscriptFound):
+    except (TranscriptsDisabled, NoTranscriptFound) as e:
+        print(f"Transkript yok (tr): {video_id} - {e}")
         try:
             transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=["en"])
             return " ".join([seg["text"] for seg in transcript])
-        except (TranscriptsDisabled, NoTranscriptFound):
+        except (TranscriptsDisabled, NoTranscriptFound) as e:
+            print(f"Transkript yok (en): {video_id} - {e}")
             try:
                 transcript_obj = YouTubeTranscriptApi.list_transcripts(video_id)
                 transcript = transcript_obj.find_generated_transcript(['tr', 'en'])
                 return " ".join([seg["text"] for seg in transcript.fetch()])
-            except Exception:
+            except Exception as e2:
+                print(f"Otomatik transcript de yok: {video_id} - {e2}")
                 return None
     except Exception as e:
-        logging.warning(f"Transkript hatası: {video_id} - {e}")
+        print(f"Transkript hatası: {video_id} - {e}")
     return None
 
 def summarize_with_gemini(transcript):
@@ -123,7 +126,7 @@ def summarize_with_gemini(transcript):
         response = model.generate_content(GEMINI_PROMPT + transcript)
         return response.text
     except Exception as e:
-        logging.warning(f"Gemini özetleme hatası: {e}")
+        print(f"Gemini özetleme hatası: {e}")
         return None
 
 def send_telegram_message(text, parse_mode="Markdown"):
@@ -133,9 +136,12 @@ def send_telegram_message(text, parse_mode="Markdown"):
         "text": text,
         "parse_mode": parse_mode
     }
-    r = requests.post(url, json=payload)
-    if r.status_code != 200:
-        logging.warning(f"Telegram mesajı gönderilemedi: {r.text}")
+    try:
+        r = requests.post(url, json=payload)
+        if r.status_code != 200:
+            print(f"Telegram mesajı gönderilemedi: {r.text}")
+    except Exception as e:
+        print(f"Telegram API hatası: {e}")
 
 def split_message(msg, max_len=4000):
     return [msg[i:i+max_len] for i in range(0, len(msg), max_len)]
@@ -146,17 +152,23 @@ def main():
     all_videos, processed, failed = [], 0, 0
     for channel_id in channels:
         videos = fetch_recent_videos(youtube, channel_id)
+        if not videos:
+            print(f"Kanalda video yok veya erişilemedi: {channel_id}")
         all_videos.extend(videos)
         if len(all_videos) >= MAX_VIDEOS:
             break
     all_videos = all_videos[:MAX_VIDEOS]
+    print(f"Taranan video sayısı: {len(all_videos)}")
     for v in all_videos:
+        print(f"Video işleniyor: {v['title']} ({v['videoId']})")
         transcript = get_transcript(v["videoId"])
         if not transcript:
+            print(f"Transkript bulunamadı, video atlanıyor: {v['videoId']}")
             failed += 1
             continue
         summary = summarize_with_gemini(transcript)
         if not summary:
+            print(f"Gemini özeti alınamadı, video atlanıyor: {v['videoId']}")
             failed += 1
             continue
         msg = f"""🎬 **{v['title']}**
@@ -191,6 +203,7 @@ def main():
 
 ⏱️ {datetime.now().strftime('%d.%m.%Y %H:%M')}
 """
+    print(report)
     send_telegram_message(report)
 
 if __name__ == "__main__":
