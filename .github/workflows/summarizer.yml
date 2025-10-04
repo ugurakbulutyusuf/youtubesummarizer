@@ -3,7 +3,7 @@ name: YouTube Summarizer
 on:
   schedule:
     # Türkiye saatiyle 16:35 = UTC+3, yani UTC 13:35
-    - cron: '45 13 * * *'
+    - cron: '35 13 * * *'
   workflow_dispatch:
 
 jobs:
