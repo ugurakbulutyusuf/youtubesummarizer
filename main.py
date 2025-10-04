@@ -9,7 +9,7 @@ import requests
 import google.generativeai as genai
 
 # --- API Anahtarları Doğrudan Kodda ---
-YOUTUBE_API_KEY = "AIzaSyDTLmEa9Gqa_mgekVps4WuEHRRli4riXXY"
+YOUTUBE_API_KEY = "AIzaSyDTlrZrVTRwZS8SLbfRRBPRB7Xr6AUjHW0"
 GEMINI_API_KEY = "AIzaSyD4FvPjl6uIF9js3UBbb-TQUpKXpvnk2c8"
 TELEGRAM_BOT_TOKEN = "8452545680:AAEVuFuaxcg-A7oCfAy5B_jDhE4aLCK5M5M"
 TELEGRAM_CHAT_ID = "-1003129826607"
